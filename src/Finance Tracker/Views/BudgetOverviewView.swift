@@ -12,6 +12,7 @@ struct BudgetOverviewView: View {
 	@Query(sort: \Category.name) private var categories: [Category]
 	@Query(sort: \PaymentAccount.name) private var accounts: [PaymentAccount]
 	@State private var showingAddTransaction = false
+	@State private var showingAccount = false
 	@State private var filterAccount: PaymentAccount?
 
 	private var calendar: Calendar { .current }
@@ -200,6 +201,12 @@ struct BudgetOverviewView: View {
 						} label: {
 							Label("Payment Accounts", systemImage: "creditcard")
 						}
+						Divider()
+						Button {
+							showingAccount = true
+						} label: {
+							Label("Account", systemImage: "person.circle")
+						}
 					} label: {
 						Label("More", systemImage: "ellipsis.circle")
 					}
@@ -241,6 +248,9 @@ struct BudgetOverviewView: View {
 			}
 			.sheet(isPresented: $showingAddTransaction) {
 				AddTransactionView()
+			}
+			.sheet(isPresented: $showingAccount) {
+				AccountView()
 			}
 			.overlay {
 				if categories.isEmpty {

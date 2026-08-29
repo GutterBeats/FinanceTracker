@@ -62,9 +62,6 @@ private struct RootView: View {
 		}
 		.onChange(of: isSignedIn) { _, signedIn in
 			if signedIn {
-				// Upload anything created locally before sign-in (e.g. if you
-				// used the app for a bit before setting up sync), then start
-				// listening for changes from other devices.
 				syncService.pushAllLocalData(context: modelContext)
 				syncService.startListening(context: modelContext)
 			} else {
@@ -75,6 +72,10 @@ private struct RootView: View {
 			if isSignedIn {
 				syncService.pushAllLocalData(context: modelContext)
 				syncService.startListening(context: modelContext)
+			}
+			// React to sign-out from anywhere (e.g. AccountView)
+			_ = Auth.auth().addStateDidChangeListener { _, user in
+				isSignedIn = user != nil
 			}
 		}
 	}
