@@ -114,6 +114,7 @@ struct AddTransactionView: View {
 		// before the toggle was switched on.
 		let categoryToSave = isPayment ? nil : selectedCategory
 
+		let savedTransaction: Transaction
 		if let editingTransaction {
 			editingTransaction.amount = amount
 			editingTransaction.date = date
@@ -121,6 +122,8 @@ struct AddTransactionView: View {
 			editingTransaction.category = categoryToSave
 			editingTransaction.paymentAccount = selectedAccount
 			editingTransaction.isPayment = isPayment
+			editingTransaction.updatedAt = .now
+			savedTransaction = editingTransaction
 		} else {
 			let transaction = Transaction(
 				amount: amount,
@@ -132,12 +135,15 @@ struct AddTransactionView: View {
 				isPayment: isPayment
 			)
 			modelContext.insert(transaction)
+			savedTransaction = transaction
 		}
+		SyncService.shared.pushTransaction(savedTransaction)
 		dismiss()
 	}
 
 	private func deleteAndDismiss() {
 		guard let editingTransaction else { return }
+		SyncService.shared.markDeletedRemote(collectionName: "transactions", id: editingTransaction.id)
 		modelContext.delete(editingTransaction)
 		dismiss()
 	}

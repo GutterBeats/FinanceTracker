@@ -103,7 +103,9 @@ struct CategoryEditorView: View {
 
 	private func delete(_ offsets: IndexSet, from list: [Category]) {
 		for index in offsets {
-			modelContext.delete(list[index])
+			let category = list[index]
+			SyncService.shared.markDeletedRemote(collectionName: "categories", id: category.id)
+			modelContext.delete(category)
 		}
 	}
 }
@@ -210,12 +212,15 @@ struct CategoryFormView: View {
 	private func save() {
 		let limit = isCalculatedRemainder ? 0.0 : (Double(monthlyLimitText) ?? 0.0)
 
+		let savedCategory: Category
 		if let category {
 			category.name = name
 			category.kind = kind
 			category.monthlyLimit = limit
 			category.iconSystemName = iconSystemName
 			category.isCalculatedRemainder = isCalculatedRemainder
+			category.updatedAt = .now
+			savedCategory = category
 		} else {
 			let newCategory = Category(
 				name: name,
@@ -225,7 +230,9 @@ struct CategoryFormView: View {
 				isCalculatedRemainder: isCalculatedRemainder
 			)
 			modelContext.insert(newCategory)
+			savedCategory = newCategory
 		}
+		SyncService.shared.pushCategory(savedCategory)
 		dismiss()
 	}
 }

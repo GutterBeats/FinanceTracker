@@ -119,7 +119,9 @@ struct PaymentAccountEditorView: View {
 
 	private func delete(_ offsets: IndexSet) {
 		for index in offsets {
-			modelContext.delete(accounts[index])
+			let account = accounts[index]
+			SyncService.shared.markDeletedRemote(collectionName: "paymentAccounts", id: account.id)
+			modelContext.delete(account)
 		}
 	}
 }
@@ -177,6 +179,7 @@ struct PaymentAccountFormView: View {
 	}
 
 	private func save() {
+		let savedAccount: PaymentAccount
 		if let account {
 			account.name = name
 			account.kind = kind
@@ -185,10 +188,14 @@ struct PaymentAccountFormView: View {
 			// so a custom choice isn't clobbered — kept simple here since accounts
 			// don't currently expose custom icon selection.
 			account.iconSystemName = kind.defaultIconSystemName
+			account.updatedAt = .now
+			savedAccount = account
 		} else {
 			let newAccount = PaymentAccount(name: name, kind: kind, last4: last4)
 			modelContext.insert(newAccount)
+			savedAccount = newAccount
 		}
+		SyncService.shared.pushPaymentAccount(savedAccount)
 		dismiss()
 	}
 }

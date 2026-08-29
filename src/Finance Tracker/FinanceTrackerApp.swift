@@ -73,6 +73,7 @@ private struct RootView: View {
 		}
 		.onAppear {
 			if isSignedIn {
+				syncService.pushAllLocalData(context: modelContext)
 				syncService.startListening(context: modelContext)
 			}
 		}

@@ -157,7 +157,9 @@ struct TransactionHistoryView: View {
 
 	private func delete(_ offsets: IndexSet, from items: [Transaction]) {
 		for index in offsets {
-			modelContext.delete(items[index])
+			let transaction = items[index]
+			SyncService.shared.markDeletedRemote(collectionName: "transactions", id: transaction.id)
+			modelContext.delete(transaction)
 		}
 	}
 }
