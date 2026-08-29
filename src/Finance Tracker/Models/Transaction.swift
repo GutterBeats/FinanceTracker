@@ -15,6 +15,7 @@ enum TransactionSource: String, Codable, CaseIterable {
 
 @Model
 final class Transaction {
+	var id: UUID = UUID()
 	var amount: Double = 0.0
 	var date: Date = Date.now
 	var note: String = ""
@@ -25,6 +26,8 @@ final class Transaction {
 	/// excluded from category budget totals and instead reduce the balance
 	/// shown for the associated account.
 	var isPayment: Bool = false
+
+	var updatedAt: Date = Date.now
 
 	var category: Category?
 	var paymentAccount: PaymentAccount?

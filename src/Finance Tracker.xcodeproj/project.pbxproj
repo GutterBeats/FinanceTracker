@@ -6,6 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		92E45E8E303D452C006A45F0 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 92E45E8D303D452C006A45F0 /* FirebaseCore */; };
+		92E45E95303D4857006A45F0 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 92E45E94303D4857006A45F0 /* FirebaseAuth */; };
+		92E45EA5303D56AD006A45F0 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 92E45EA4303D56AD006A45F0 /* FirebaseFirestore */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		9227124E303C047200A06DB4 /* Finance Tracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Finance Tracker.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -36,6 +42,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				92E45E8E303D452C006A45F0 /* FirebaseCore in Frameworks */,
+				92E45E95303D4857006A45F0 /* FirebaseAuth in Frameworks */,
+				92E45EA5303D56AD006A45F0 /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -46,6 +55,7 @@
 			isa = PBXGroup;
 			children = (
 				92271250303C047200A06DB4 /* Finance Tracker */,
+				92E45E93303D4857006A45F0 /* Frameworks */,
 				9227124F303C047200A06DB4 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -56,6 +66,13 @@
 				9227124E303C047200A06DB4 /* Finance Tracker.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		92E45E93303D4857006A45F0 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -78,6 +95,9 @@
 			);
 			name = "Finance Tracker";
 			packageProductDependencies = (
+				92E45E8D303D452C006A45F0 /* FirebaseCore */,
+				92E45E94303D4857006A45F0 /* FirebaseAuth */,
+				92E45EA4303D56AD006A45F0 /* FirebaseFirestore */,
 			);
 			productName = "Finance Tracker";
 			productReference = 9227124E303C047200A06DB4 /* Finance Tracker.app */;
@@ -107,6 +127,9 @@
 			);
 			mainGroup = 92271245303C047200A06DB4;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				92E45E8A303D452C006A45F0 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 9227124F303C047200A06DB4 /* Products */;
 			projectDirPath = "";
@@ -143,13 +166,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Finance Tracker/Finance Tracker.entitlements";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 84SQWM4SSU;
-				ENABLE_APP_SANDBOX = YES;
+				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Finance Tracker/Info.plist";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
@@ -169,6 +193,7 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.5;
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = "io.buttergeats.Finance-Tracker";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -191,13 +216,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Finance Tracker/Finance Tracker.entitlements";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 84SQWM4SSU;
-				ENABLE_APP_SANDBOX = YES;
+				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Finance Tracker/Info.plist";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
@@ -217,6 +243,7 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.5;
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = "io.buttergeats.Finance-Tracker";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -372,6 +399,35 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		92E45E8A303D452C006A45F0 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.18.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		92E45E8D303D452C006A45F0 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 92E45E8A303D452C006A45F0 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		92E45E94303D4857006A45F0 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 92E45E8A303D452C006A45F0 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		92E45EA4303D56AD006A45F0 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 92E45E8A303D452C006A45F0 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 92271246303C047200A06DB4 /* Project object */;
 }

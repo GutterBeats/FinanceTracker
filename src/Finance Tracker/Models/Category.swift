@@ -15,6 +15,7 @@ enum CategoryKind: String, Codable, CaseIterable {
 
 @Model
 final class Category {
+	var id: UUID = UUID()
 	var name: String = ""
 	var kind: CategoryKind = CategoryKind.expense
 	var monthlyLimit: Double = 0.0          // 0 = no budget set; ignored when isCalculatedRemainder is true
@@ -25,6 +26,9 @@ final class Category {
 	/// (total income this month) - (sum of other expense categories' monthlyLimit),
 	/// rather than using `monthlyLimit` directly. Only one category should have this set.
 	var isCalculatedRemainder: Bool = false
+
+	/// Last modified time, used for last-write-wins conflict resolution when syncing.
+	var updatedAt: Date = Date.now
 
 	@Relationship(deleteRule: .nullify, inverse: \Transaction.category)
 	var transactions: [Transaction]? = []
