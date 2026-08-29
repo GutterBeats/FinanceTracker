@@ -95,6 +95,8 @@ struct AddTransactionView: View {
 				}
 			}
 			.onAppear(perform: loadExistingValues)
+			.frame(maxWidth: 450)
+			.padding(16)
 		}
 	}
 

@@ -197,6 +197,8 @@ struct CategoryFormView: View {
 				}
 			}
 			.onAppear(perform: loadExistingValues)
+			.frame(maxWidth: 400)
+			.padding(16)
 		}
 	}
 
