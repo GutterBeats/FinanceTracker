@@ -81,85 +81,109 @@ struct BudgetOverviewView: View {
 
 	var body: some View {
 		NavigationStack {
-			List {
-				if let filterAccount {
-					HStack {
-						Label(filterAccount.name, systemImage: filterAccount.iconSystemName)
-							.font(.caption)
-						Spacer()
-						Button {
-							self.filterAccount = nil
-						} label: {
-							Image(systemName: "xmark.circle.fill")
-						}
-						.foregroundStyle(.secondary)
-					}
-					.listRowSeparator(.hidden)
-				}
-
-				Section(filterAccount == nil ? "This Month" : "This Month · \(filterAccount!.name)") {
-					HStack {
-						summaryColumn(title: "Income", amount: totalIncome, color: .green)
-						Divider()
-						summaryColumn(title: "Expenses", amount: totalExpenses, color: .red)
-						Divider()
-						summaryColumn(title: "Net", amount: totalIncome - totalExpenses, color: .primary)
-					}
-					.padding(.vertical, 4)
-				}
-
-				if !categories.filter({ $0.kind == .income }).isEmpty {
-					Section("Income") {
-						ForEach(categories.filter { $0.kind == .income }) { category in
-							HStack {
-								Label(category.name, systemImage: category.iconSystemName)
-								Spacer()
-								Text(spent(for: category), format: .currency(code: "USD"))
-									.foregroundStyle(.secondary)
+			ScrollView {
+				VStack(spacing: 16) {
+					if let filterAccount {
+						HStack {
+							Label(filterAccount.name, systemImage: filterAccount.iconSystemName)
+								.font(.caption)
+							Spacer()
+							Button {
+								self.filterAccount = nil
+							} label: {
+								Image(systemName: "xmark.circle.fill")
 							}
+							.foregroundStyle(.secondary)
 						}
 					}
-				}
 
-				Section("Budgets") {
-					ForEach(categories.filter { $0.kind == .expense }) { category in
-						let spent = spent(for: category)
-						let limit = limit(for: category)
-						let hasLimit = category.isCalculatedRemainder || limit > 0
-						let progress = limit > 0 ? min(spent / limit, 1.0) : 0
-
-						VStack(alignment: .leading, spacing: 6) {
-							HStack {
-								Label(category.name, systemImage: category.iconSystemName)
-								if category.isCalculatedRemainder {
-									Text("REMAINING")
-										.font(.caption2.bold())
-										.foregroundStyle(.secondary)
-								}
-								Spacer()
-								Text(hasLimit
-									 ? "\(spent, format: .currency(code: "USD")) / \(limit, format: .currency(code: "USD"))"
-									 : "\(spent, format: .currency(code: "USD"))")
-									.font(.subheadline)
-									.foregroundStyle(limit < 0 ? .red : .secondary)
-							}
-
-							if hasLimit && limit > 0 {
-								ProgressView(value: progress)
-									.tint(progress >= 1.0 ? .red : .accentColor)
-							} else if limit < 0 {
-								Text("Over-allocated by \(abs(limit), format: .currency(code: "USD")) — other budgets exceed income.")
-									.font(.caption2)
-									.foregroundStyle(.red)
-							}
+					GroupBox {
+						HStack {
+							summaryColumn(title: "Income", amount: totalIncome, color: .green)
+							Divider()
+							summaryColumn(title: "Expenses", amount: totalExpenses, color: .red)
+							Divider()
+							summaryColumn(title: "Net", amount: totalIncome - totalExpenses, color: .primary)
 						}
 						.padding(.vertical, 4)
+					} label: {
+						Text(filterAccount == nil ? "This Month" : "This Month · \(filterAccount!.name)")
+					}
+
+					let incomeCategories = categories.filter { $0.kind == .income }
+					if !incomeCategories.isEmpty {
+						GroupBox {
+							VStack(spacing: 0) {
+								ForEach(incomeCategories) { category in
+									HStack {
+										Label(category.name, systemImage: category.iconSystemName)
+										Spacer()
+										Text(spent(for: category), format: .currency(code: "USD"))
+											.foregroundStyle(.secondary)
+									}
+									.padding(.vertical, 6)
+									if category.id != incomeCategories.last?.id {
+										Divider()
+									}
+								}
+							}
+						} label: {
+							Text("Income")
+						}
+					}
+
+					let expenseCategories = categories.filter { $0.kind == .expense }
+					if !expenseCategories.isEmpty {
+						GroupBox {
+							VStack(spacing: 0) {
+								ForEach(expenseCategories) { category in
+									let spent = spent(for: category)
+									let limit = limit(for: category)
+									let hasLimit = category.isCalculatedRemainder || limit > 0
+									let progress = limit > 0 ? min(spent / limit, 1.0) : 0
+
+									VStack(alignment: .leading, spacing: 6) {
+										HStack {
+											Label(category.name, systemImage: category.iconSystemName)
+											if category.isCalculatedRemainder {
+												Text("REMAINING")
+													.font(.caption2.bold())
+													.foregroundStyle(.secondary)
+											}
+											Spacer()
+											Text(hasLimit
+												 ? "\(spent, format: .currency(code: "USD")) / \(limit, format: .currency(code: "USD"))"
+												 : "\(spent, format: .currency(code: "USD"))")
+												.font(.subheadline)
+												.foregroundStyle(limit < 0 ? .red : .secondary)
+										}
+
+										if hasLimit && limit > 0 {
+											ProgressView(value: progress)
+												.tint(progress >= 1.0 ? .red : .accentColor)
+										} else if limit < 0 {
+											Text("Over-allocated by \(abs(limit), format: .currency(code: "USD")) — other budgets exceed income.")
+												.font(.caption2)
+												.foregroundStyle(.red)
+										}
+									}
+									.padding(.vertical, 4)
+
+									if category.id != expenseCategories.last?.id {
+										Divider()
+									}
+								}
+							}
+						} label: {
+							Text("Budgets")
+						}
 					}
 				}
+				.padding()
 			}
 			.navigationTitle("Budgets")
 			.toolbar {
-                ToolbarItem(placement: placement) {
+				ToolbarItem(placement: placement) {
 					Menu {
 						NavigationLink {
 							TransactionHistoryView()
