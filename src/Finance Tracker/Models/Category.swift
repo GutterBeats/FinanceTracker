@@ -27,6 +27,8 @@ final class Category {
 	/// rather than using `monthlyLimit` directly. Only one category should have this set.
 	var isCalculatedRemainder: Bool = false
 
+	var budget: Budget
+
 	/// Last modified time, used for last-write-wins conflict resolution when syncing.
 	var updatedAt: Date = Date.now
 
@@ -39,7 +41,8 @@ final class Category {
 		monthlyLimit: Double = 0.0,
 		colorHex: String = "#4A90D9",
 		iconSystemName: String = "circle.fill",
-		isCalculatedRemainder: Bool = false
+		isCalculatedRemainder: Bool = false,
+		budget: Budget
 	) {
 		self.name = name
 		self.kind = kind
@@ -47,5 +50,6 @@ final class Category {
 		self.colorHex = colorHex
 		self.iconSystemName = iconSystemName
 		self.isCalculatedRemainder = isCalculatedRemainder
+		self.budget = budget
 	}
 }

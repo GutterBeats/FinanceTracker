@@ -123,6 +123,8 @@ struct CategoryFormView: View {
 	@State private var monthlyLimitText: String = ""
 	@State private var iconSystemName: String = "circle.fill"
 	@State private var isCalculatedRemainder: Bool = false
+	@Query(sort: \Budget.startDate, order: .reverse) private var budgets: [Budget]
+	@State private var selectedBudget: Budget? = nil
 
 	private let iconOptions = [
 		"circle.fill", "cart.fill", "house.fill", "car.fill", "fork.knife",
@@ -170,7 +172,22 @@ struct CategoryFormView: View {
 							#endif
 						}
 					} header: {
-						Text("Monthly Budget")
+						Text("Budget Limit")
+					}
+
+				}
+
+				Section("Budget Period") {
+					if budgets.isEmpty {
+						Text("No budgets yet — create one in the Budgets editor.")
+							.font(.footnote)
+							.foregroundStyle(.secondary)
+					} else {
+						Picker("Period", selection: $selectedBudget) {
+							ForEach(budgets) { budget in
+								Text(budget.name).tag(budget as Budget?)
+							}
+						}
 					}
 				}
 
@@ -193,7 +210,7 @@ struct CategoryFormView: View {
 				}
 				ToolbarItem(placement: .confirmationAction) {
 					Button("Save") { save() }
-						.disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+						.disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || selectedBudget == nil)
 				}
 			}
 			.onAppear(perform: loadExistingValues)
@@ -203,15 +220,20 @@ struct CategoryFormView: View {
 	}
 
 	private func loadExistingValues() {
-		guard let category else { return }
-		name = category.name
-		kind = category.kind
-		monthlyLimitText = category.monthlyLimit > 0 ? String(category.monthlyLimit) : ""
-		iconSystemName = category.iconSystemName
-		isCalculatedRemainder = category.isCalculatedRemainder
+		if let category {
+			name = category.name
+			kind = category.kind
+			monthlyLimitText = category.monthlyLimit > 0 ? String(category.monthlyLimit) : ""
+			iconSystemName = category.iconSystemName
+			isCalculatedRemainder = category.isCalculatedRemainder
+			selectedBudget = category.budget
+		} else {
+			selectedBudget = budgets.first
+		}
 	}
 
 	private func save() {
+		guard let budget = selectedBudget else { return }
 		let limit = isCalculatedRemainder ? 0.0 : (Double(monthlyLimitText) ?? 0.0)
 
 		let savedCategory: Category
@@ -221,6 +243,7 @@ struct CategoryFormView: View {
 			category.monthlyLimit = limit
 			category.iconSystemName = iconSystemName
 			category.isCalculatedRemainder = isCalculatedRemainder
+			category.budget = budget
 			category.updatedAt = .now
 			savedCategory = category
 		} else {
@@ -229,7 +252,8 @@ struct CategoryFormView: View {
 				kind: kind,
 				monthlyLimit: limit,
 				iconSystemName: iconSystemName,
-				isCalculatedRemainder: isCalculatedRemainder
+				isCalculatedRemainder: isCalculatedRemainder,
+				budget: budget
 			)
 			modelContext.insert(newCategory)
 			savedCategory = newCategory
@@ -241,5 +265,5 @@ struct CategoryFormView: View {
 
 #Preview {
 	CategoryEditorView()
-		.modelContainer(for: [Transaction.self, Category.self], inMemory: true)
+		.modelContainer(for: [Transaction.self, Category.self, Budget.self], inMemory: true)
 }

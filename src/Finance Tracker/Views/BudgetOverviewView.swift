@@ -11,8 +11,10 @@ import SwiftData
 struct BudgetOverviewView: View {
 	@Query(sort: \Category.name) private var categories: [Category]
 	@Query(sort: \PaymentAccount.name) private var accounts: [PaymentAccount]
+	@Query(sort: \Budget.startDate, order: .reverse) private var budgets: [Budget]
 	@State private var showingAddTransaction = false
 	@State private var showingAccount = false
+	@State private var selectedBudget: Budget? = nil
 	@State private var filterAccount: PaymentAccount?
 
 	private var calendar: Calendar { .current }
@@ -33,9 +35,13 @@ struct BudgetOverviewView: View {
 		return (start, end)
 	}
 
-	/// Amount spent/earned in a category this month, respecting the account filter if set.
+	private var activePeriod: (start: Date, end: Date) {
+		selectedBudget.map { ($0.startDate, $0.endDate) } ?? currentMonthRange
+	}
+
+	/// Amount spent/earned in a category within its budget period, respecting the account filter.
 	private func spent(for category: Category) -> Double {
-		let range = currentMonthRange
+		let range = activePeriod
 		let txns = category.transactions ?? []
 		return txns
 			.filter { $0.date >= range.start && $0.date <= range.end }
@@ -47,22 +53,27 @@ struct BudgetOverviewView: View {
 	/// used for the remaining-balance calculation so switching the filter doesn't
 	/// change what a fixed budget category is allowed to be.
 	private var totalIncomeAllAccounts: Double {
-		let range = currentMonthRange
-		return categories
+		let range = activePeriod
+		return budgetCategories
 			.filter { $0.kind == .income }
 			.flatMap { $0.transactions ?? [] }
 			.filter { $0.date >= range.start && $0.date <= range.end }
 			.reduce(0) { $0 + $1.amount }
 	}
 
+	private var budgetCategories: [Category] {
+		guard let selectedBudget else { return [] }
+		return categories.filter { $0.budget.id == selectedBudget.id }
+	}
+
 	private var totalIncome: Double {
-		categories
+		budgetCategories
 			.filter { $0.kind == .income }
 			.reduce(0) { $0 + spent(for: $1) }
 	}
 
 	private var totalExpenses: Double {
-		categories
+		budgetCategories
 			.filter { $0.kind == .expense }
 			.reduce(0) { $0 + spent(for: $1) }
 	}
@@ -74,7 +85,7 @@ struct BudgetOverviewView: View {
 	private func limit(for category: Category) -> Double {
 		guard category.isCalculatedRemainder else { return category.monthlyLimit }
 
-		let otherLimits = categories
+		let otherLimits = budgetCategories
 			.filter { $0.kind == .expense && $0 !== category }
 			.reduce(0) { $0 + $1.monthlyLimit }
 		return totalIncomeAllAccounts - otherLimits
@@ -108,10 +119,20 @@ struct BudgetOverviewView: View {
 						}
 						.padding(.vertical, 4)
 					} label: {
-						Text(filterAccount == nil ? "This Month" : "This Month · \(filterAccount!.name)")
+						if budgets.isEmpty {
+							Text("This Month")
+						} else {
+							Picker("Budget", selection: $selectedBudget) {
+								ForEach(budgets) { budget in
+									Text(budget.name).tag(budget as Budget?)
+								}
+							}
+							.pickerStyle(.menu)
+							.labelsHidden()
+						}
 					}
 
-					let incomeCategories = categories.filter { $0.kind == .income }
+					let incomeCategories = budgetCategories.filter { $0.kind == .income }
 					if !incomeCategories.isEmpty {
 						GroupBox {
 							VStack(spacing: 0) {
@@ -133,7 +154,7 @@ struct BudgetOverviewView: View {
 						}
 					}
 
-					let expenseCategories = categories.filter { $0.kind == .expense }
+					let expenseCategories = budgetCategories.filter { $0.kind == .expense }
 					if !expenseCategories.isEmpty {
 						GroupBox {
 							VStack(spacing: 0) {
@@ -158,7 +179,6 @@ struct BudgetOverviewView: View {
 												.font(.subheadline)
 												.foregroundStyle(limit < 0 ? .red : .secondary)
 										}
-
 										if hasLimit && limit > 0 {
 											ProgressView(value: progress)
 												.tint(progress >= 1.0 ? .red : .accentColor)
@@ -186,6 +206,11 @@ struct BudgetOverviewView: View {
 			.toolbar {
 				ToolbarItem(placement: placement) {
 					Menu {
+						NavigationLink {
+							BudgetEditorView()
+						} label: {
+							Label("Budgets", systemImage: "calendar")
+						}
 						NavigationLink {
 							CategoryEditorView()
 						} label: {
@@ -247,16 +272,37 @@ struct BudgetOverviewView: View {
 			.sheet(isPresented: $showingAccount) {
 				AccountView()
 			}
+			.onAppear {
+				if selectedBudget == nil {
+					selectedBudget = activeBudget(from: budgets)
+				}
+			}
+			.onChange(of: budgets) { _, newBudgets in
+				if selectedBudget == nil {
+					selectedBudget = activeBudget(from: newBudgets)
+				}
+			}
 			.overlay {
-				if categories.isEmpty {
+				if budgets.isEmpty {
 					ContentUnavailableView(
-						"No Categories Yet",
+						"No Budgets Yet",
+						systemImage: "calendar",
+						description: Text("Create a budget period in the ··· menu to get started.")
+					)
+				} else if budgetCategories.isEmpty {
+					ContentUnavailableView(
+						"No Categories",
 						systemImage: "chart.pie",
-						description: Text("Add a category to start tracking your budget.")
+						description: Text("Assign a category to this budget in the Categories editor.")
 					)
 				}
 			}
 		}
+	}
+
+	private func activeBudget(from list: [Budget]) -> Budget? {
+		let today = Date.now
+		return list.first(where: { $0.startDate <= today && $0.endDate >= today }) ?? list.first
 	}
 
 	private func summaryColumn(title: String, amount: Double, color: Color) -> some View {
@@ -274,6 +320,6 @@ struct BudgetOverviewView: View {
 
 #Preview {
 	BudgetOverviewView()
-		.modelContainer(for: [Transaction.self, Category.self, PaymentAccount.self], inMemory: true)
+		.modelContainer(for: [Transaction.self, Category.self, PaymentAccount.self, Budget.self], inMemory: true)
 }
 

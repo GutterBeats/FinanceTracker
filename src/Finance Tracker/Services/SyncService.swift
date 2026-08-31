@@ -61,6 +61,7 @@ final class SyncService: ObservableObject {
 			"colorHex": category.colorHex,
 			"iconSystemName": category.iconSystemName,
 			"isCalculatedRemainder": category.isCalculatedRemainder,
+			"budgetID": category.budget.id.uuidString,
 			"updatedAt": Timestamp(date: category.updatedAt),
 			"deleted": false,
 		], merge: true) { [weak self] error in
@@ -77,6 +78,20 @@ final class SyncService: ObservableObject {
 			"last4": account.last4,
 			"iconSystemName": account.iconSystemName,
 			"updatedAt": Timestamp(date: account.updatedAt),
+			"deleted": false,
+		], merge: true) { [weak self] error in
+			self?.reportError(error)
+		}
+	}
+
+	func pushBudget(_ budget: Budget) {
+		guard let ref = collection("budgets")?.document(budget.id.uuidString) else { return }
+		ref.setData([
+			"id": budget.id.uuidString,
+			"name": budget.name,
+			"startDate": Timestamp(date: budget.startDate),
+			"endDate": Timestamp(date: budget.endDate),
+			"updatedAt": Timestamp(date: budget.updatedAt),
 			"deleted": false,
 		], merge: true) { [weak self] error in
 			self?.reportError(error)
@@ -115,6 +130,9 @@ final class SyncService: ObservableObject {
 	/// sign-in so pre-existing local data reaches Firestore (and, from there,
 	/// any other signed-in device).
 	func pushAllLocalData(context: ModelContext) {
+		if let budgets = try? context.fetch(FetchDescriptor<Budget>()) {
+			budgets.forEach(pushBudget)
+		}
 		if let categories = try? context.fetch(FetchDescriptor<Category>()) {
 			categories.forEach(pushCategory)
 		}
@@ -132,6 +150,12 @@ final class SyncService: ObservableObject {
 		stopListening()
 		guard userID != nil else { return }
 		isListening = true
+
+		if let l = collection("budgets")?.addSnapshotListener({ [weak self] snap, _ in
+			Task { @MainActor in
+				self?.mergeBudgets(snap, into: context)
+			}
+		}) { listeners.append(l) }
 
 		if let l = collection("categories")?.addSnapshotListener({ [weak self] snap, _ in
 			Task { @MainActor in
@@ -179,6 +203,11 @@ final class SyncService: ObservableObject {
 			}
 
 			let kind = CategoryKind(rawValue: data["kind"] as? String ?? "") ?? .expense
+			let resolvedBudget: Budget? = (data["budgetID"] as? String).flatMap { idStr in
+				guard let bid = UUID(uuidString: idStr) else { return nil }
+				return try? context.fetch(FetchDescriptor<Budget>(predicate: #Predicate { $0.id == bid })).first
+			}
+			guard let resolvedBudget else { continue }
 			if let existing {
 				existing.name = data["name"] as? String ?? existing.name
 				existing.kind = kind
@@ -186,6 +215,7 @@ final class SyncService: ObservableObject {
 				existing.colorHex = data["colorHex"] as? String ?? existing.colorHex
 				existing.iconSystemName = data["iconSystemName"] as? String ?? existing.iconSystemName
 				existing.isCalculatedRemainder = data["isCalculatedRemainder"] as? Bool ?? existing.isCalculatedRemainder
+				existing.budget = resolvedBudget
 				existing.updatedAt = remoteUpdatedAt
 			} else {
 				let new = Category(
@@ -194,7 +224,46 @@ final class SyncService: ObservableObject {
 					monthlyLimit: data["monthlyLimit"] as? Double ?? 0,
 					colorHex: data["colorHex"] as? String ?? "#4A90D9",
 					iconSystemName: data["iconSystemName"] as? String ?? "circle.fill",
-					isCalculatedRemainder: data["isCalculatedRemainder"] as? Bool ?? false
+					isCalculatedRemainder: data["isCalculatedRemainder"] as? Bool ?? false,
+					budget: resolvedBudget
+				)
+				new.id = id
+				new.updatedAt = remoteUpdatedAt
+				context.insert(new)
+			}
+		}
+	}
+
+	private func mergeBudgets(_ snapshot: QuerySnapshot?, into context: ModelContext) {
+		guard let docs = snapshot?.documents else { return }
+		for doc in docs {
+			let data = doc.data()
+			guard let idString = data["id"] as? String, let id = UUID(uuidString: idString) else { continue }
+			let remoteUpdatedAt = (data["updatedAt"] as? Timestamp)?.dateValue() ?? .distantPast
+			let deleted = data["deleted"] as? Bool ?? false
+
+			let existing = try? context.fetch(
+				FetchDescriptor<Budget>(predicate: #Predicate { $0.id == id })
+			).first
+
+			if deleted {
+				if let existing { context.delete(existing) }
+				continue
+			}
+			if let existing, existing.updatedAt >= remoteUpdatedAt {
+				continue
+			}
+
+			if let existing {
+				existing.name = data["name"] as? String ?? existing.name
+				existing.startDate = (data["startDate"] as? Timestamp)?.dateValue() ?? existing.startDate
+				existing.endDate = (data["endDate"] as? Timestamp)?.dateValue() ?? existing.endDate
+				existing.updatedAt = remoteUpdatedAt
+			} else {
+				let new = Budget(
+					name: data["name"] as? String ?? "",
+					startDate: (data["startDate"] as? Timestamp)?.dateValue() ?? .now,
+					endDate: (data["endDate"] as? Timestamp)?.dateValue() ?? .now
 				)
 				new.id = id
 				new.updatedAt = remoteUpdatedAt

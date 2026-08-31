@@ -17,6 +17,7 @@ struct FinanceTrackerApp: App {
 			Transaction.self,
 			Category.self,
 			PaymentAccount.self,
+			Budget.self,
 		])
 
 		let modelConfiguration = ModelConfiguration(
@@ -27,7 +28,14 @@ struct FinanceTrackerApp: App {
 		do {
 			return try ModelContainer(for: schema, configurations: [modelConfiguration])
 		} catch {
-			fatalError("Could not create ModelContainer: \(error)")
+			do {
+				// If loading fails or you want a fresh start, delete the file
+				 try? FileManager.default.removeItem(at: modelConfiguration.url)
+				 return try ModelContainer(for: schema, configurations: [modelConfiguration])
+			}
+			catch {
+				fatalError("Could not create ModelContainer: \(error)")
+			}
 		}
 	}()
 
