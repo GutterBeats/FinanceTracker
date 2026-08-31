@@ -53,7 +53,14 @@ private struct RootView: View {
 	var body: some View {
 		Group {
 			if isSignedIn {
-				BudgetOverviewView()
+				TabView {
+					Tab("Budgets", systemImage: "chart.pie") {
+						BudgetOverviewView()
+					}
+					Tab("Transactions", systemImage: "list.bullet.rectangle") {
+						TransactionHistoryView()
+					}
+				}
 			} else {
 				AuthView {
 					isSignedIn = true

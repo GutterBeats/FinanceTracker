@@ -16,11 +16,18 @@ struct TransactionHistoryView: View {
 	@State private var editingTransaction: Transaction?
 	@State private var filterKind: CategoryKind?
 	@State private var filterAccount: PaymentAccount?
+	@State private var filterStartDate: Date?
+	@State private var filterEndDate: Date?
+	@State private var showingDateFilter = false
+
+	private var isDateFiltered: Bool { filterStartDate != nil || filterEndDate != nil }
 
 	private var filteredTransactions: [Transaction] {
 		transactions.filter { txn in
 			(filterKind == nil || txn.category?.kind == filterKind)
 			&& (filterAccount == nil || txn.paymentAccount === filterAccount)
+			&& (filterStartDate == nil || txn.date >= filterStartDate!)
+			&& (filterEndDate == nil || txn.date <= filterEndDate!)
 		}
 	}
 
@@ -103,8 +110,29 @@ struct TransactionHistoryView: View {
 					}
 				}
 			}
+			.safeAreaInset(edge: .bottom) {
+				Color.clear.frame(height: 80)
+			}
+			.overlay(alignment: .bottomTrailing) {
+				Button {
+					showingDateFilter = true
+				} label: {
+					Image(systemName: isDateFiltered ? "calendar.badge.checkmark" : "calendar")
+						.font(.title2)
+						.foregroundStyle(.white)
+						.padding(16)
+						.background(isDateFiltered ? Color.green : Color.accentColor)
+						.clipShape(Circle())
+						.shadow(radius: 4)
+				}
+				.buttonStyle(.plain)
+				.padding()
+			}
 			.sheet(item: $editingTransaction) { transaction in
 				AddTransactionView(editingTransaction: transaction)
+			}
+			.sheet(isPresented: $showingDateFilter) {
+				DateRangePickerView(startDate: $filterStartDate, endDate: $filterEndDate)
 			}
 			.overlay {
 				if filteredTransactions.isEmpty {
@@ -161,6 +189,62 @@ struct TransactionHistoryView: View {
 			SyncService.shared.markDeletedRemote(collectionName: "transactions", id: transaction.id)
 			modelContext.delete(transaction)
 		}
+	}
+}
+
+struct DateRangePickerView: View {
+	@Environment(\.dismiss) private var dismiss
+	@Binding var startDate: Date?
+	@Binding var endDate: Date?
+
+	@State private var localStart: Date
+	@State private var localEnd: Date
+
+	init(startDate: Binding<Date?>, endDate: Binding<Date?>) {
+		_startDate = startDate
+		_endDate = endDate
+		let now = Date.now
+		let monthAgo = Calendar.current.date(byAdding: .month, value: -1, to: now) ?? now
+		_localStart = State(initialValue: startDate.wrappedValue ?? monthAgo)
+		_localEnd = State(initialValue: endDate.wrappedValue ?? now)
+	}
+
+	var body: some View {
+		NavigationStack {
+			Form {
+				Section {
+					DatePicker("From", selection: $localStart, displayedComponents: .date)
+					DatePicker("To", selection: $localEnd, in: localStart..., displayedComponents: .date)
+				}
+
+				if startDate != nil || endDate != nil {
+					Section {
+						Button("Clear Filter", role: .destructive) {
+							startDate = nil
+							endDate = nil
+							dismiss()
+						}
+					}
+				}
+			}
+			.navigationTitle("Date Range")
+			.toolbar {
+				ToolbarItem(placement: .cancellationAction) {
+					Button("Cancel") { dismiss() }
+				}
+				ToolbarItem(placement: .confirmationAction) {
+					Button("Apply") {
+						startDate = Calendar.current.startOfDay(for: localStart)
+						// Include the full end day
+						endDate = Calendar.current.date(
+							bySettingHour: 23, minute: 59, second: 59, of: localEnd
+						)
+						dismiss()
+					}
+				}
+			}
+		}
+		.frame(maxWidth: 400)
 	}
 }
 

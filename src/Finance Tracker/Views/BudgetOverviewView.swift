@@ -187,11 +187,6 @@ struct BudgetOverviewView: View {
 				ToolbarItem(placement: placement) {
 					Menu {
 						NavigationLink {
-							TransactionHistoryView()
-						} label: {
-							Label("History", systemImage: "list.bullet.rectangle")
-						}
-						NavigationLink {
 							CategoryEditorView()
 						} label: {
 							Label("Categories", systemImage: "tag")
