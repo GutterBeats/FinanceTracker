@@ -96,6 +96,13 @@ struct BudgetFormView: View {
                     DatePicker("Start", selection: $startDate, displayedComponents: .date)
                     DatePicker("End", selection: $endDate, in: startDate..., displayedComponents: .date)
                 }
+                if budget != nil {
+                    Section {
+                        Button("Delete Budget", role: .destructive) {
+                            deleteAndDismiss()
+                        }
+                    }
+                }
             }
             .navigationTitle(budget == nil ? "New Budget" : "Edit Budget")
             .toolbar {
@@ -117,6 +124,13 @@ struct BudgetFormView: View {
         name = budget.name
         startDate = budget.startDate
         endDate = budget.endDate
+    }
+
+    private func deleteAndDismiss() {
+        guard let budget else { return }
+        SyncService.shared.markDeletedRemote(collectionName: "budgets", id: budget.id)
+        modelContext.delete(budget)
+        dismiss()
     }
 
     private func save() {

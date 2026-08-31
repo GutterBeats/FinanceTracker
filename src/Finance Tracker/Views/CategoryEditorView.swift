@@ -202,6 +202,13 @@ struct CategoryFormView: View {
 						}
 					}
 				}
+				if category != nil {
+					Section {
+						Button("Delete Category", role: .destructive) {
+							deleteAndDismiss()
+						}
+					}
+				}
 			}
 			.navigationTitle(category == nil ? "New Category" : "Edit Category")
 			.toolbar {
@@ -217,6 +224,13 @@ struct CategoryFormView: View {
 			.frame(maxWidth: 400)
 			.padding(16)
 		}
+	}
+
+	private func deleteAndDismiss() {
+		guard let category else { return }
+		SyncService.shared.markDeletedRemote(collectionName: "categories", id: category.id)
+		modelContext.delete(category)
+		dismiss()
 	}
 
 	private func loadExistingValues() {

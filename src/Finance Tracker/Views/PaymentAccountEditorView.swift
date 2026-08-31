@@ -156,6 +156,13 @@ struct PaymentAccountFormView: View {
 							}
 					}
 				}
+				if account != nil {
+					Section {
+						Button("Delete Account", role: .destructive) {
+							deleteAndDismiss()
+						}
+					}
+				}
 			}
 			.navigationTitle(account == nil ? "New Account" : "Edit Account")
 			.toolbar {
@@ -171,6 +178,13 @@ struct PaymentAccountFormView: View {
 			.frame(maxWidth: 400)
 			.padding(16)
 		}
+	}
+
+	private func deleteAndDismiss() {
+		guard let account else { return }
+		SyncService.shared.markDeletedRemote(collectionName: "paymentAccounts", id: account.id)
+		modelContext.delete(account)
+		dismiss()
 	}
 
 	private func loadExistingValues() {
