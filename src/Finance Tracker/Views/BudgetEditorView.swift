@@ -14,6 +14,7 @@ struct BudgetEditorView: View {
 
     @State private var showingNewBudget = false
     @State private var editingBudget: Budget?
+    @State private var budgetToDelete: Budget?
 
     var body: some View {
         List {
@@ -30,7 +31,11 @@ struct BudgetEditorView: View {
                     }
                 }
             }
-            .onDelete(perform: delete)
+            .onDelete { offsets in
+                if let index = offsets.first {
+                    budgetToDelete = budgets[index]
+                }
+            }
         }
         .navigationTitle("Budgets")
         .toolbar {
@@ -48,6 +53,21 @@ struct BudgetEditorView: View {
         .sheet(item: $editingBudget) { budget in
             BudgetFormView(budget: budget)
         }
+        .confirmationDialog(
+            "Delete Budget?",
+            isPresented: Binding(get: { budgetToDelete != nil }, set: { if !$0 { budgetToDelete = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                if let budget = budgetToDelete {
+                    SyncService.shared.markDeletedRemote(collectionName: "budgets", id: budget.id)
+                    modelContext.delete(budget)
+                }
+                budgetToDelete = nil
+            }
+        } message: {
+            Text("Deleting this budget will also remove all its categories.")
+        }
         .overlay {
             if budgets.isEmpty {
                 ContentUnavailableView(
@@ -58,14 +78,6 @@ struct BudgetEditorView: View {
             }
         }
     }
-
-    private func delete(_ offsets: IndexSet) {
-        for index in offsets {
-            let budget = budgets[index]
-            SyncService.shared.markDeletedRemote(collectionName: "budgets", id: budget.id)
-            modelContext.delete(budget)
-        }
-    }
 }
 
 struct BudgetFormView: View {
@@ -73,6 +85,8 @@ struct BudgetFormView: View {
     @Environment(\.dismiss) private var dismiss
 
     let budget: Budget?
+
+    @State private var showingDeleteConfirmation = false
 
     private static var defaultStart: Date {
         let comps = Calendar.current.dateComponents([.year, .month], from: .now)
@@ -99,7 +113,7 @@ struct BudgetFormView: View {
                 if budget != nil {
                     Section {
                         Button("Delete Budget", role: .destructive) {
-                            deleteAndDismiss()
+                            showingDeleteConfirmation = true
                         }
                     }
                 }
@@ -115,6 +129,15 @@ struct BudgetFormView: View {
                 }
             }
             .onAppear(perform: loadExistingValues)
+            .confirmationDialog(
+                "Delete Budget?",
+                isPresented: $showingDeleteConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Delete", role: .destructive) { deleteAndDismiss() }
+            } message: {
+                Text("Deleting this budget will also remove all its categories.")
+            }
             .frame(maxWidth: 400)
         }
     }

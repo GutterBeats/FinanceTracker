@@ -14,6 +14,7 @@ struct PaymentAccountEditorView: View {
 
 	@State private var editingAccount: PaymentAccount?
 	@State private var showingNewAccount = false
+	@State private var accountToDelete: PaymentAccount?
 
 	private var currentMonthRange: (start: Date, end: Date) {
 		let calendar = Calendar.current
@@ -36,38 +37,38 @@ struct PaymentAccountEditorView: View {
 		return charges - payments
 	}
 
-    @ViewBuilder
-    private func accountTrailingInfo(for account: PaymentAccount) -> some View {
-        if account.kind == .creditCard {
-            let balance = monthlyBalance(for: account)
-            VStack(alignment: .trailing, spacing: 1) {
-                Text(balance, format: .currency(code: "USD"))
-                    .font(.subheadline.bold())
-                    .foregroundStyle(balance > 0 ? Color.primary : Color.green)
-                Text("owed this month")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-        } else {
-            Text(account.kind.displayName + (account.last4.isEmpty ? "" : " ••\(account.last4)"))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-    }
+	@ViewBuilder
+	private func accountTrailingInfo(for account: PaymentAccount) -> some View {
+		if account.kind == .creditCard {
+			let balance = monthlyBalance(for: account)
+			VStack(alignment: .trailing, spacing: 1) {
+				Text(balance, format: .currency(code: "USD"))
+					.font(.subheadline.bold())
+					.foregroundStyle(balance > 0 ? Color.primary : Color.green)
+				Text("owed this month")
+					.font(.caption2)
+					.foregroundStyle(.secondary)
+			}
+		} else {
+			Text(account.kind.displayName + (account.last4.isEmpty ? "" : " ••\(account.last4)"))
+				.font(.subheadline)
+				.foregroundStyle(.secondary)
+		}
+	}
 
-    @ViewBuilder
-    private func accountLabel(for account: PaymentAccount) -> some View {
-        HStack {
-            Label {
-                Text(account.name)
-            } icon: {
-                Image(systemName: account.iconSystemName)
-            }
-            .foregroundStyle(.primary)
-            Spacer()
-            accountTrailingInfo(for: account)
-        }
-    }
+	@ViewBuilder
+	private func accountLabel(for account: PaymentAccount) -> some View {
+		HStack {
+			Label {
+				Text(account.name)
+			} icon: {
+				Image(systemName: account.iconSystemName)
+			}
+			.foregroundStyle(.primary)
+			Spacer()
+			accountTrailingInfo(for: account)
+		}
+	}
 
 	var body: some View {
 		NavigationStack {
@@ -80,9 +81,7 @@ struct PaymentAccountEditorView: View {
 					}
 					.swipeActions(edge: .trailing) {
 						Button(role: .destructive) {
-							if let index = accounts.firstIndex(where: { $0.id == account.id }) {
-								delete(IndexSet(integer: index))
-							}
+							accountToDelete = account
 						} label: {
 							Label("Delete", systemImage: "trash")
 						}
@@ -105,6 +104,21 @@ struct PaymentAccountEditorView: View {
 			.sheet(item: $editingAccount) { account in
 				PaymentAccountFormView(account: account)
 			}
+			.confirmationDialog(
+				"Delete Account?",
+				isPresented: Binding(get: { accountToDelete != nil }, set: { if !$0 { accountToDelete = nil } }),
+				titleVisibility: .visible
+			) {
+				Button("Delete", role: .destructive) {
+					if let account = accountToDelete {
+						SyncService.shared.markDeletedRemote(collectionName: "paymentAccounts", id: account.id)
+						modelContext.delete(account)
+					}
+					accountToDelete = nil
+				}
+			} message: {
+				Text("This action cannot be undone.")
+			}
 			.overlay {
 				if accounts.isEmpty {
 					ContentUnavailableView(
@@ -114,14 +128,6 @@ struct PaymentAccountEditorView: View {
 					)
 				}
 			}
-		}
-	}
-
-	private func delete(_ offsets: IndexSet) {
-		for index in offsets {
-			let account = accounts[index]
-			SyncService.shared.markDeletedRemote(collectionName: "paymentAccounts", id: account.id)
-			modelContext.delete(account)
 		}
 	}
 }
@@ -135,6 +141,7 @@ struct PaymentAccountFormView: View {
 	@State private var name: String = ""
 	@State private var kind: PaymentAccountKind = .creditCard
 	@State private var last4: String = ""
+	@State private var showingDeleteConfirmation = false
 
 	var body: some View {
 		NavigationStack {
@@ -159,7 +166,7 @@ struct PaymentAccountFormView: View {
 				if account != nil {
 					Section {
 						Button("Delete Account", role: .destructive) {
-							deleteAndDismiss()
+							showingDeleteConfirmation = true
 						}
 					}
 				}
@@ -175,6 +182,15 @@ struct PaymentAccountFormView: View {
 				}
 			}
 			.onAppear(perform: loadExistingValues)
+			.confirmationDialog(
+				"Delete Account?",
+				isPresented: $showingDeleteConfirmation,
+				titleVisibility: .visible
+			) {
+				Button("Delete", role: .destructive) { deleteAndDismiss() }
+			} message: {
+				Text("This action cannot be undone.")
+			}
 			.frame(maxWidth: 400)
 			.padding(16)
 		}
@@ -220,4 +236,3 @@ struct PaymentAccountFormView: View {
 	PaymentAccountEditorView()
 		.modelContainer(for: [Transaction.self, Category.self, PaymentAccount.self], inMemory: true)
 }
-

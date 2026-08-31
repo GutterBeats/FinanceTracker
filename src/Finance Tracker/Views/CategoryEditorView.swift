@@ -14,6 +14,7 @@ struct CategoryEditorView: View {
 
 	@State private var editingCategory: Category?
 	@State private var showingNewCategory = false
+	@State private var categoryToDelete: Category?
 
 	private var expenseCategories: [Category] {
 		categories.filter { $0.kind == .expense }
@@ -39,7 +40,7 @@ struct CategoryEditorView: View {
 						categoryRow(category)
 					}
 					.onDelete { offsets in
-						delete(offsets, from: expenseCategories)
+						if let index = offsets.first { categoryToDelete = expenseCategories[index] }
 					}
 				}
 
@@ -48,7 +49,7 @@ struct CategoryEditorView: View {
 						categoryRow(category)
 					}
 					.onDelete { offsets in
-						delete(offsets, from: incomeCategories)
+						if let index = offsets.first { categoryToDelete = incomeCategories[index] }
 					}
 				}
 			}
@@ -77,6 +78,18 @@ struct CategoryEditorView: View {
 					)
 				}
 			}
+			.confirmationDialog(
+				"Delete Category?",
+				isPresented: Binding(get: { categoryToDelete != nil }, set: { if !$0 { categoryToDelete = nil } }),
+				titleVisibility: .visible
+			) {
+				Button("Delete", role: .destructive) {
+					if let c = categoryToDelete { deleteConfirmed(c) }
+					categoryToDelete = nil
+				}
+			} message: {
+				Text("This action cannot be undone.")
+			}
 		}
 	}
 
@@ -101,12 +114,9 @@ struct CategoryEditorView: View {
 		}
 	}
 
-	private func delete(_ offsets: IndexSet, from list: [Category]) {
-		for index in offsets {
-			let category = list[index]
-			SyncService.shared.markDeletedRemote(collectionName: "categories", id: category.id)
-			modelContext.delete(category)
-		}
+	private func deleteConfirmed(_ category: Category) {
+		SyncService.shared.markDeletedRemote(collectionName: "categories", id: category.id)
+		modelContext.delete(category)
 	}
 }
 
@@ -125,6 +135,7 @@ struct CategoryFormView: View {
 	@State private var isCalculatedRemainder: Bool = false
 	@Query(sort: \Budget.startDate, order: .reverse) private var budgets: [Budget]
 	@State private var selectedBudget: Budget? = nil
+	@State private var showingDeleteConfirmation = false
 
 	private let iconOptions = [
 		"circle.fill", "cart.fill", "house.fill", "car.fill", "fork.knife",
@@ -205,7 +216,7 @@ struct CategoryFormView: View {
 				if category != nil {
 					Section {
 						Button("Delete Category", role: .destructive) {
-							deleteAndDismiss()
+							showingDeleteConfirmation = true
 						}
 					}
 				}
@@ -221,6 +232,15 @@ struct CategoryFormView: View {
 				}
 			}
 			.onAppear(perform: loadExistingValues)
+			.confirmationDialog(
+				"Delete Category?",
+				isPresented: $showingDeleteConfirmation,
+				titleVisibility: .visible
+			) {
+				Button("Delete", role: .destructive) { deleteAndDismiss() }
+			} message: {
+				Text("This action cannot be undone.")
+			}
 			.frame(maxWidth: 400)
 			.padding(16)
 		}

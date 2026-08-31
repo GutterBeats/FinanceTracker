@@ -22,6 +22,7 @@ struct TransactionHistoryView: View {
 	@State private var filterStartDate: Date?
 	@State private var filterEndDate: Date?
 	@State private var showingDateFilter = false
+	@State private var transactionToDelete: Transaction?
 
 	private var isFiltered: Bool { filterStartDate != nil || filterEndDate != nil || filterAccount != nil }
 
@@ -64,7 +65,9 @@ struct TransactionHistoryView: View {
 								.matchedTransitionSource(id: "addTransaction", in: namespace)
 						}
 						.onDelete { offsets in
-							delete(offsets, from: group.items)
+							if let index = offsets.first {
+								transactionToDelete = group.items[index]
+							}
 						}
 					}
 				}
@@ -103,6 +106,21 @@ struct TransactionHistoryView: View {
 					filterAccount: $filterAccount
 				)
 				.navigationTransition(.zoom(sourceID: "transactionFilter", in: namespace))
+			}
+			.confirmationDialog(
+				"Delete Transaction?",
+				isPresented: Binding(get: { transactionToDelete != nil }, set: { if !$0 { transactionToDelete = nil } }),
+				titleVisibility: .visible
+			) {
+				Button("Delete", role: .destructive) {
+					if let t = transactionToDelete {
+						SyncService.shared.markDeletedRemote(collectionName: "transactions", id: t.id)
+						modelContext.delete(t)
+					}
+					transactionToDelete = nil
+				}
+			} message: {
+				Text("This action cannot be undone.")
 			}
 			.overlay {
 				if filteredTransactions.isEmpty {
@@ -153,13 +171,6 @@ struct TransactionHistoryView: View {
 		return transaction.category?.kind == .income ? .green : .primary
 	}
 
-	private func delete(_ offsets: IndexSet, from items: [Transaction]) {
-		for index in offsets {
-			let transaction = items[index]
-			SyncService.shared.markDeletedRemote(collectionName: "transactions", id: transaction.id)
-			modelContext.delete(transaction)
-		}
-	}
 }
 
 struct TransactionFilterView: View {

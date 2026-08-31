@@ -24,6 +24,7 @@ struct AddTransactionView: View {
 	@State private var selectedCategory: Category?
 	@State private var selectedAccount: PaymentAccount?
 	@State private var isPayment: Bool = false
+	@State private var showingDeleteConfirmation = false
 
 	private var isEditing: Bool { editingTransaction != nil }
 
@@ -79,7 +80,7 @@ struct AddTransactionView: View {
 				if isEditing {
 					Section {
 						Button("Delete Transaction", role: .destructive) {
-							deleteAndDismiss()
+							showingDeleteConfirmation = true
 						}
 					}
 				}
@@ -95,6 +96,15 @@ struct AddTransactionView: View {
 				}
 			}
 			.onAppear(perform: loadExistingValues)
+			.confirmationDialog(
+				"Delete Transaction?",
+				isPresented: $showingDeleteConfirmation,
+				titleVisibility: .visible
+			) {
+				Button("Delete", role: .destructive) { deleteAndDismiss() }
+			} message: {
+				Text("This action cannot be undone.")
+			}
 			.frame(maxWidth: 450)
 			.padding(16)
 		}
