@@ -13,6 +13,7 @@ struct TransactionHistoryView: View {
 	@Query(sort: \PaymentAccount.name) private var accounts: [PaymentAccount]
 	@Query(sort: \Budget.startDate, order: .reverse) private var budgets: [Budget]
 	@Environment(\.modelContext) private var modelContext
+	@Namespace private var namespace
 
 	@State private var editingTransaction: Transaction?
 	@State private var filterKind: CategoryKind?
@@ -60,6 +61,7 @@ struct TransactionHistoryView: View {
 							transactionRow(transaction)
 								.contentShape(Rectangle())
 								.onTapGesture { editingTransaction = transaction }
+								.matchedTransitionSource(id: "addTransaction", in: namespace)
 						}
 						.onDelete { offsets in
 							delete(offsets, from: group.items)
@@ -82,12 +84,14 @@ struct TransactionHistoryView: View {
 						.background(isFiltered ? Color.green : Color.accentColor)
 						.clipShape(Circle())
 						.shadow(radius: 4)
+						.matchedTransitionSource(id: "transactionFilter", in: namespace)
 				}
 				.buttonStyle(.plain)
 				.padding()
 			}
 			.sheet(item: $editingTransaction) { transaction in
 				AddTransactionView(editingTransaction: transaction)
+					.navigationTransition(.zoom(sourceID: "addTransaction", in: namespace))
 			}
 			.sheet(isPresented: $showingDateFilter) {
 				TransactionFilterView(
@@ -98,6 +102,7 @@ struct TransactionHistoryView: View {
 					filterBudget: $filterBudget,
 					filterAccount: $filterAccount
 				)
+				.navigationTransition(.zoom(sourceID: "transactionFilter", in: namespace))
 			}
 			.overlay {
 				if filteredTransactions.isEmpty {
